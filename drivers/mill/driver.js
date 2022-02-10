@@ -6,11 +6,11 @@ class MillDriver extends Homey.Driver {
   async onInit() {
   }
 
-  async onPairListDevices(data, callback) {
+  async onPairListDevices(data) {
     if (!Homey.app.isConnected()) {
       // eslint-disable-next-line no-underscore-dangle
       debug('Unable to pair, not authenticated');
-      callback(new Error(Homey.__('pair.messages.notAuthorized')));
+      throw new Error(Homey.__('pair.messages.notAuthorized'));
     } else {
       debug('Pairing');
       const millApi = Homey.app.getMillApi();
@@ -35,7 +35,7 @@ class MillDriver extends Homey.Driver {
           }
         ));
       }));
-      callback(null, [].concat.apply([], rooms));
+      return [].concat.apply([], rooms);
     }
   }
 }

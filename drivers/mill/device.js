@@ -155,24 +155,26 @@ class MillDevice extends Homey.Device {
     debug('device deleted', this.getState());
   }
 
-  onCapabilityTargetTemperature(value, opts, callback) {
-    debug(`onCapabilityTargetTemperature(${value})`);
-    const temp = Math.ceil(value);
-    if (temp !== value && this.room.modeName !== 'Off') { // half degrees isn't supported by Mill, need to round it up
-      this.setCapabilityValue('target_temperature', temp);
-      debug(`onCapabilityTargetTemperature(${value}=>${temp})`);
-    }
-    const millApi = Homey.app.getMillApi();
-    this.room.targetTemp = temp;
-    millApi.changeRoomTemperature(this.deviceId, this.room)
-      .then(() => {
-        debug(`onCapabilityTargetTemperature(${temp}) done`);
-        debug(`[${this.getName()}] Changed temp to ${temp}: currentMode: ${this.room.currentMode}/${this.room.programMode}, comfortTemp: ${this.room.comfortTemp}, awayTemp: ${this.room.awayTemp}, avgTemp: ${this.room.avgTemp}, sleepTemp: ${this.room.sleepTemp}`);
-        callback(null, temp);
-      }).catch((err) => {
-        debug(`onCapabilityTargetTemperature(${temp}) error`);
-        debug(`[${this.getName()}] Change temp to ${temp} resultet in error`, err);
-        callback(err);
+  onCapabilityTargetTemperature(value, opts) {
+    return new Promise((resolve, reject) => {
+      debug(`onCapabilityTargetTemperature(${value})`);
+      const temp = Math.ceil(value);
+      if (temp !== value && this.room.modeName !== 'Off') { // half degrees isn't supported by Mill, need to round it up
+        this.setCapabilityValue('target_temperature', temp);
+        debug(`onCapabilityTargetTemperature(${value}=>${temp})`);
+      }
+      const millApi = Homey.app.getMillApi();
+      this.room.targetTemp = temp;
+      millApi.changeRoomTemperature(this.deviceId, this.room)
+        .then(() => {
+          debug(`onCapabilityTargetTemperature(${temp}) done`);
+          debug(`[${this.getName()}] Changed temp to ${temp}: currentMode: ${this.room.currentMode}/${this.room.programMode}, comfortTemp: ${this.room.comfortTemp}, awayTemp: ${this.room.awayTemp}, avgTemp: ${this.room.avgTemp}, sleepTemp: ${this.room.sleepTemp}`);
+          resolve(temp);
+        }).catch((err) => {
+          debug(`onCapabilityTargetTemperature(${temp}) error`);
+          debug(`[${this.getName()}] Change temp to ${temp} resultet in error`, err);
+          reject(err);
+        });
       });
   }
 
@@ -196,17 +198,13 @@ class MillDevice extends Homey.Device {
     });
   }
 
-  onCapabilityThermostatMode(value, opts, callback) {
-    this.setThermostatMode(value)
-      .then(result => callback(null, result))
-      .catch(err => callback(err));
+  async onCapabilityThermostatMode(value, opts) {
+    return await this.setThermostatMode(value);
   }
 
-  onCapabilityOnOff(value, opts, callback) {
+  async onCapabilityOnOff(value, opts) {
     let mode = value ? 'Program' : 'Off';
-    this.setThermostatMode(mode)
-      .then(result => callback(null, result))
-      .catch(err => callback(err));
+    return await this.setThermostatMode(mode);
   }
 }
 

@@ -1,6 +1,7 @@
 // const fs = require('fs');
 const nock = require('nock');
 const chai = require('chai');
+const { expect } = require('chai');
 // const { expect } = require('chai');
 const chaiAsPromised = require('chai-as-promised');
 const mock = require('mock-require');
@@ -51,8 +52,6 @@ describe('driver', () => {
 //    Homey.env = {};
     Homey.app = new MillApp();
     const driver = new MillDriver('mill', []);
-    driver.onPairListDevices(null, (result) => {
-      console.log('>>', result);
-    });
+    expect(driver.onPairListDevices(null)).to.be.rejectedWith('pair.messages.notAuthorized');
   });
 });
