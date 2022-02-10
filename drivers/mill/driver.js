@@ -4,6 +4,7 @@ const { debug } = require('./../../lib/util');
 
 class MillDriver extends Homey.Driver {
   async onInit() {
+    this.app = this.app ?? this.homey?.app ?? Homey.app;
   }
 
   async onPairListDevices(data) {

@@ -5,7 +5,8 @@ const { debug, error } = require('./../../lib/util');
 const Room = require('./../../lib/models');
 
 class MillDevice extends Homey.Device {
-  onInit() {
+  async onInit() {
+    this.app =  this.app ?? this.getDriver().app ?? Homey.app;
     this.deviceId = this.getData().id;
 
     debug(`[${this.getName()}] ${this.getClass()} (${this.deviceId}) initialized`);
@@ -54,7 +55,7 @@ class MillDevice extends Homey.Device {
 
     this.refreshTimeout = null;
     this.room = null;
-    this.refreshState();
+    await this.refreshState();
   }
 
   async refreshState() {
@@ -66,13 +67,13 @@ class MillDevice extends Homey.Device {
     }
 
     try {
-      if (Homey.app.isConnected()) {
+      if (this.app?.isConnected()) {
         await this.refreshMillService();
         this.setAvailable();
       } else {
         debug(`[${this.getName()}] Mill not connected`);
         this.setUnavailable();
-        await Homey.app.connectToMill().then(() => {
+        await this.app?.connectToMill().then(() => {
           this.scheduleRefresh(10);
         }).catch((err) => {
           error('Error caught while refreshing state', err);
@@ -89,13 +90,14 @@ class MillDevice extends Homey.Device {
   }
 
   scheduleRefresh(interval) {
-    const refreshInterval = interval || Homey.ManagerSettings.get('interval');
+    const refreshInterval = interval || this.homey?.settings?.get('interval') || 10;
+
     this.refreshTimeout = setTimeout(this.refreshState.bind(this), refreshInterval * 1000);
     debug(`[${this.getName()}] Next refresh in ${refreshInterval} seconds`);
   }
 
   async refreshMillService() {
-    const millApi = Homey.app.getMillApi();
+    const millApi = this.app?.getMillApi();
 
     return millApi.listDevices(this.getData().id)
       .then((room) => {
@@ -163,7 +165,7 @@ class MillDevice extends Homey.Device {
         this.setCapabilityValue('target_temperature', temp);
         debug(`onCapabilityTargetTemperature(${value}=>${temp})`);
       }
-      const millApi = Homey.app.getMillApi();
+      const millApi = this.app.getMillApi();
       this.room.targetTemp = temp;
       millApi.changeRoomTemperature(this.deviceId, this.room)
         .then(() => {
@@ -180,7 +182,7 @@ class MillDevice extends Homey.Device {
 
   setThermostatMode(value) {
     return new Promise((resolve, reject) => {
-      const millApi = Homey.app.getMillApi();
+      const millApi = this.app.getMillApi();
       this.room.modeName = value;
       const jobs = [];
       if (this.room.modeName !== 'Off') {

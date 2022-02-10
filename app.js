@@ -4,7 +4,7 @@ const Mill = require('./lib/mill');
 const { debug } = require('./lib/util');
 
 class MillApp extends Homey.App {
-  onInit() {
+  async onInit() {
     this.millApi = new Mill();
     this.user = null;
     this.isAuthenticated = false;
