@@ -120,7 +120,7 @@ describe('mill', () => {
   describe('settings', () => {
     it('should set temperature correctly', async () => {
       nock('https://eurouter.ablecloud.cn:9005')
-        .post('/millService/v1/changeRoomModeTempInfo')
+        .post('/millService/v1/changeRoomModeTempInfoAway')
         .reply(200, '');
 
       const rooms = await this.mill.changeRoomTemperature(201810061300110000, {

@@ -8,6 +8,8 @@ mock('homey', require('@milanzor/homey-mock'));
 const Homey = require('homey');
 //Homey.App = class Empty {};
 
+Homey.__ = (key, opts) => key;
+
 const Mill = require('../../../../lib/mill');
 const MillApp = require('../../../../app');
 // const Room = require('../../../../lib/models');

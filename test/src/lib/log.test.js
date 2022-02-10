@@ -1,6 +1,17 @@
 const { expect } = require('chai');
 
-process.env.SENTRY_DSN = 'https://3474e68f802c435db291e7c489a7f0ea:68807e44cccf4dfe8195e99920abf0c5@sentry.io/1321923';
+const homey = require('./../mock/homey');
+
+global.Homey = homey;
+
+const mock = require('mock-require');
+
+mock('homey', homey);
+
+homey.env = {};
+homey.env.SENTRY_DSN = 'https://3474e68f802c435db291e7c489a7f0ea:68807e44cccf4dfe8195e99920abf0c5@sentry.io/1321923';
+
+//process.env.SENTRY_DSN = 'https://3474e68f802c435db291e7c489a7f0ea:68807e44cccf4dfe8195e99920abf0c5@sentry.io/1321923';
 const Log = require('../../../lib/log');
 
 describe('log', () => {

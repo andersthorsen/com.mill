@@ -1,15 +1,18 @@
+const settings = {
+  username: 'username',
+  password: 'password',
+  debugLog: []
+};
+
 module.exports = {
   App: class App {},
   manifest: {
     id: 'com.mill'
   },
-  settings: {
-    username: 'username',
-    password: 'password',
-    debugLog: []
-  },
+  settings: settings,
   ManagerSettings: {
-    get: param => param,
+    get: param => settings[param],
     set: () => {}
-  }
+  },
+  __: (key, tagsopt) => key
 };
