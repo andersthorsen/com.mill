@@ -52,6 +52,8 @@ describe('driver', () => {
 //    Homey.env = {};
     Homey.app = new MillApp();
     const driver = new MillDriver('mill', []);
+    driver.app = Homey.app;
+    driver.homey = Homey;
     expect(driver.onPairListDevices(null)).to.be.rejectedWith('pair.messages.notAuthorized');
   });
 });
