@@ -6,6 +6,11 @@ const homey = require('./mock/homey');
 const mill = require('./mock/mill');
 
 describe('com.mill app', () => {
+
+  class StubClass {
+    homey = homey;
+  }
+
   before(() => {
     chai.use(chaiAsPromised);
     const App = proxyquire('../../app', {
@@ -13,7 +18,9 @@ describe('com.mill app', () => {
       './lib/mill': mill,
       './lib/util': { debug: () => {} }
     });
-    this.app = new App();
+
+    this.app = new App(homey);
+    this.app.homey = homey;
   });
 
   beforeEach(() => {

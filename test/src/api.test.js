@@ -10,10 +10,16 @@ describe('mill api', () => {
     chai.use(chaiAsPromised);
     const App = proxyquire('../../app', {
       homey,
+      settings: homey.settings,
+      manifest: homey.manifest,
       './lib/mill': mill,
       './lib/util': { debug: () => {} }
     });
     const app = new App();
+    app.homey = homey;
+//    app.settings = homey.settings;
+//    app.manifest = homey.manifest;
+
     app.onInit();
     homey.app = app;
     const api = proxyquire('../../api', {

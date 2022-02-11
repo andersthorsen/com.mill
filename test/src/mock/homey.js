@@ -5,12 +5,18 @@ const settings = {
 };
 
 module.exports = {
-  App: class App {},
+  App: class App {
+  },
+  app: {
+    settings: {
+      get: param => settings[param],
+      set: () => {}
+    }
+  },
   manifest: {
     id: 'com.mill'
   },
-  settings: settings,
-  ManagerSettings: {
+  settings: {
     get: param => settings[param],
     set: () => {}
   },

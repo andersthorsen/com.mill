@@ -26,7 +26,8 @@ module.exports = [
     method: 'POST',
     path: '/clearLog',
     fn: async (args, callback) => {
-      Homey.ManagerSettings.set('debugLog', []);
+      console.log(Homey);
+      Homey.settings.set('debugLog', []);
       return callback(null, {});
     }
   }

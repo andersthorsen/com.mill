@@ -1,15 +1,16 @@
 // eslint-disable-next-line import/no-unresolved
 const Homey = require('homey');
-const { Log } = require('./../../lib/log');
-const { debug, error } = require('./../../lib/util');
+const Log = require('./../../lib/log');
+const { debug: _debug, error: _error } = require('./../../lib/util');
 const Room = require('./../../lib/models');
 
 class MillDevice extends Homey.Device {
   async onInit() {
     this.app =  this.app ?? this.getDriver().app ?? Homey.app;
     this.deviceId = this.getData().id;
+    this.logger = new Log(this.homey ?? Homey);
 
-    debug(`[${this.getName()}] ${this.getClass()} (${this.deviceId}) initialized`);
+    this.debug(`[${this.getName()}] ${this.getClass()} (${this.deviceId}) initialized`);
 
     // Add new capailities for devices that don't have them yet
     if (!this.getCapabilities().includes('onoff')) {
@@ -49,7 +50,7 @@ class MillDevice extends Homey.Device {
     this.setProgramAction
       .register()
       .registerRunListener((args) => {
-        debug(`[${args.device.getName()}] Flow changed mode to ${args.mill_mode}`);
+        this.debug(`[${args.device.getName()}] Flow changed mode to ${args.mill_mode}`);
         return args.device.setThermostatMode(args.mill_mode);
       });
 
@@ -59,7 +60,7 @@ class MillDevice extends Homey.Device {
   }
 
   async refreshState() {
-    debug(`[${this.getName()}] Refreshing state`);
+    this.debug(`[${this.getName()}] Refreshing state`);
 
     if (this.refreshTimeout) {
       clearTimeout(this.refreshTimeout);
@@ -71,17 +72,17 @@ class MillDevice extends Homey.Device {
         await this.refreshMillService();
         this.setAvailable();
       } else {
-        debug(`[${this.getName()}] Mill not connected`);
+        this.debug(`[${this.getName()}] Mill not connected`);
         this.setUnavailable();
         await this.app?.connectToMill().then(() => {
           this.scheduleRefresh(10);
         }).catch((err) => {
-          error('Error caught while refreshing state', err);
+          this.error('Error caught while refreshing state', err);
         });
       }
     } catch (e) {
-      error('Exception caught', e);
-      Log.captureException(e);
+      this.error('Exception caught', e);
+      this.logger.captureException(e);
     } finally {
       if (this.refreshTimeout === null) {
         this.scheduleRefresh();
@@ -90,10 +91,10 @@ class MillDevice extends Homey.Device {
   }
 
   scheduleRefresh(interval) {
-    const refreshInterval = interval || this.homey?.settings?.get('interval') || 10;
+    const refreshInterval = interval || this.app.settings.get('interval') || 10;
 
     this.refreshTimeout = setTimeout(this.refreshState.bind(this), refreshInterval * 1000);
-    debug(`[${this.getName()}] Next refresh in ${refreshInterval} seconds`);
+    this.debug(`[${this.getName()}] Next refresh in ${refreshInterval} seconds`);
   }
 
   async refreshMillService() {
@@ -101,7 +102,7 @@ class MillDevice extends Homey.Device {
 
     return millApi.listDevices(this.getData().id)
       .then((room) => {
-        debug(`[${this.getName()}] Mill state refreshed`, {
+        this.debug(`[${this.getName()}] Mill state refreshed`, {
           comfortTemp: room.comfortTemp,
           awayTemp: room.awayTemp,
           holidayTemp: room.holidayTemp,
@@ -114,7 +115,7 @@ class MillDevice extends Homey.Device {
 
         if (room.programMode !== undefined) {
           if (this.room && !this.room.modesMatch(room) && this.room.modeName !== room.modeName) {
-            debug(`[${this.getName()}] Triggering mode change from ${this.room.modeName} to ${room.modeName}`);
+            this.debug(`[${this.getName()}] Triggering mode change from ${this.room.modeName} to ${room.modeName}`);
             // not needed, setCapabilityValue will trigger
             // this.modeChangedTrigger.trigger(this, { mill_mode: room.modeName })
             //   .catch(this.error);
@@ -140,41 +141,41 @@ class MillDevice extends Homey.Device {
             jobs.push(this.setCapabilityValue('target_temperature', room.targetTemp));
           }
           return Promise.all(jobs).catch((err) => {
-            Log.captureException(err);
+            this.logger.captureException(err);
           });
         }
       }).catch((err) => {
-        error(`[${this.getName()}] Error caught while refreshing state`, err);
+        this.error(`[${this.getName()}] Error caught while refreshing state`, err);
       });
   }
 
   onAdded() {
-    debug('device added', this.getState());
+    this.debug('device added', this.getState());
   }
 
   onDeleted() {
     clearTimeout(this.refreshTimeout);
-    debug('device deleted', this.getState());
+    this.debug('device deleted', this.getState());
   }
 
   onCapabilityTargetTemperature(value, opts) {
     return new Promise((resolve, reject) => {
-      debug(`onCapabilityTargetTemperature(${value})`);
+      this.debug(`onCapabilityTargetTemperature(${value})`);
       const temp = Math.ceil(value);
       if (temp !== value && this.room.modeName !== 'Off') { // half degrees isn't supported by Mill, need to round it up
         this.setCapabilityValue('target_temperature', temp);
-        debug(`onCapabilityTargetTemperature(${value}=>${temp})`);
+        this.debug(`onCapabilityTargetTemperature(${value}=>${temp})`);
       }
       const millApi = this.app.getMillApi();
       this.room.targetTemp = temp;
       millApi.changeRoomTemperature(this.deviceId, this.room)
         .then(() => {
-          debug(`onCapabilityTargetTemperature(${temp}) done`);
-          debug(`[${this.getName()}] Changed temp to ${temp}: currentMode: ${this.room.currentMode}/${this.room.programMode}, comfortTemp: ${this.room.comfortTemp}, awayTemp: ${this.room.awayTemp}, avgTemp: ${this.room.avgTemp}, sleepTemp: ${this.room.sleepTemp}`);
+          this.debug(`onCapabilityTargetTemperature(${temp}) done`);
+          this.debug(`[${this.getName()}] Changed temp to ${temp}: currentMode: ${this.room.currentMode}/${this.room.programMode}, comfortTemp: ${this.room.comfortTemp}, awayTemp: ${this.room.awayTemp}, avgTemp: ${this.room.avgTemp}, sleepTemp: ${this.room.sleepTemp}`);
           resolve(temp);
         }).catch((err) => {
-          debug(`onCapabilityTargetTemperature(${temp}) error`);
-          debug(`[${this.getName()}] Change temp to ${temp} resultet in error`, err);
+          this.debug(`onCapabilityTargetTemperature(${temp}) error`);
+          this.debug(`[${this.getName()}] Change temp to ${temp} resultet in error`, err);
           reject(err);
         });
       });
@@ -191,10 +192,10 @@ class MillDevice extends Homey.Device {
       jobs.push(millApi.changeRoomMode(this.deviceId, this.room.currentMode));
 
       Promise.all(jobs).then(() => {
-        debug(`[${this.getName()}] Changed mode to ${value}: currentMode: ${this.room.currentMode}/${this.room.programMode}, comfortTemp: ${this.room.comfortTemp}, awayTemp: ${this.room.awayTemp}, avgTemp: ${this.room.avgTemp}, sleepTemp: ${this.room.sleepTemp}`);
+        this.debug(`[${this.getName()}] Changed mode to ${value}: currentMode: ${this.room.currentMode}/${this.room.programMode}, comfortTemp: ${this.room.comfortTemp}, awayTemp: ${this.room.awayTemp}, avgTemp: ${this.room.avgTemp}, sleepTemp: ${this.room.sleepTemp}`);
         resolve(value);
       }).catch((err) => {
-        error(`[${this.getName()}] Change mode to ${value} resulted in error`, err);
+        this.error(`[${this.getName()}] Change mode to ${value} resulted in error`, err);
         reject(err);
       });
     });
@@ -208,6 +209,15 @@ class MillDevice extends Homey.Device {
     let mode = value ? 'Program' : 'Off';
     return await this.setThermostatMode(mode);
   }
+
+  error (message, data) {
+    _error(message, data, this.homey);
+  }
+
+  debug (message, data) {
+    _debug(message, data, this.homey);
+  }
+
 }
 
 module.exports = MillDevice;
