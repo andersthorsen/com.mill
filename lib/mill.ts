@@ -1,10 +1,16 @@
-const crypto = require('crypto');
-const Room = require('./models');
-const { fetchJSON } = require('./util');
+import crypto from 'crypto';
+import { Room, IRoomInfo, ITempSettings, IHome, IHomeList, IRequestProperties, Query, IRoomList, IDeviceInfo, IDeviceDetailInfo, IRoomInfoDto } from './models';
+import { fetchJSON } from './util';
 
 const TOKEN_SAFE_ZONE = 5 * 60 * 1000;
 
-class Mill {
+export default class Mill {
+  nonce: any;
+  authEndpoint: string;
+  endpoint: string;
+  timeZoneNum: string;
+  auth: { token: string; tokenExpire: Date; refreshToken: string; refreshTokenExpire: Date; } | null;
+  user: any;
   constructor() {
     this.authEndpoint = 'https://eurouter.ablecloud.cn:9005/zc-account/v1';
     this.endpoint = 'https://eurouter.ablecloud.cn:9005/millService/v1';
@@ -14,7 +20,7 @@ class Mill {
     this.timeZoneNum = '+02:00';
   }
 
-  async login(username, password) {
+  async login(username: string, password: string): Promise<any> {
     const body = JSON.stringify({
       account: username,
       password
@@ -26,8 +32,8 @@ class Mill {
       'X-Zc-Major-Domain': 'seanywell',
       'X-Zc-Msg-Name': 'millService',
       'X-Zc-Sub-Domain': 'milltype',
-      'X-Zc-Seq-Id': 1,
-      'X-Zc-Version': 1
+      'X-Zc-Seq-Id': '1',
+      'X-Zc-Version': '1',
     };
 
     const endpoint = `${this.authEndpoint}/login`;
@@ -52,7 +58,7 @@ class Mill {
     const bodyLen = bodyStr.length;
     const timeout = 300;
     const timestamp = (new Date().getTime() / 1000).toFixed();
-    const signature = timeout + timestamp + this.nonce + this.auth.refreshToken;
+    const signature = timeout + timestamp + this.nonce + this.auth?.refreshToken;
     const shaSignature = crypto.createHash('sha1').update(signature).digest('hex');
 
     const headers = {
@@ -60,13 +66,13 @@ class Mill {
       'Connection': 'Keep-Alive',
       'X-Zc-Major-Domain': 'seanywell',
       'X-Zc-Start-Time': timestamp,
-      'X-Zc-Version': 1,
+      'X-Zc-Version': '1',
       'X-Zc-Timestamp': timestamp,
-      'X-Zc-Timeout': timeout,
+      'X-Zc-Timeout': `${timeout}`,
       'X-Zc-Nonce': this.nonce,
       'X-Zc-User-Id': this.user.userId,
       'X-Zc-User-Signature': shaSignature,
-      'X-Zc-Content-Length': bodyLen
+      'X-Zc-Content-Length': `${bodyLen}`,
     };
 
     const endpoint = `${this.authEndpoint}/updateAccessToken`;
@@ -86,19 +92,19 @@ class Mill {
 
   async validateAccessTokens() {
     const now = new Date();
-    const tokenExpiration = this.auth.tokenExpire.getTime() - now.getTime();
+    const tokenExpiration = (this.auth?.tokenExpire.getTime() || now.getTime()) - now.getTime();
 
     if (tokenExpiration < TOKEN_SAFE_ZONE) {
       await this.updateAccessToken();
     }
   }
 
-  async request(command, body) {
+  async request(command: string, body?: (IRoomInfo & IRequestProperties) | (IHome & IRequestProperties) | Query | ITempSettings | undefined) {
     const bodyStr = JSON.stringify(body || {});
     const bodyLen = bodyStr.length;
     const timeout = 300;
     const timestamp = (new Date().getTime() / 1000).toFixed();
-    const signature = timeout + timestamp + this.nonce + this.auth.token;
+    const signature = timeout + timestamp + this.nonce + this.auth?.token;
     const shaSignature = crypto.createHash('sha1').update(signature).digest('hex');
 
     const headers = {
@@ -107,14 +113,14 @@ class Mill {
       'X-Zc-Major-Domain': 'seanywell',
       'X-Zc-Msg-Name': 'millService',
       'X-Zc-Sub-Domain': 'milltype',
-      'X-Zc-Seq-Id': 1,
-      'X-Zc-Version': 1,
+      'X-Zc-Seq-Id': '1',
+      'X-Zc-Version': '1',
       'X-Zc-Timestamp': timestamp,
-      'X-Zc-Timeout': timeout,
+      'X-Zc-Timeout': `${timeout}`,
       'X-Zc-Nonce': this.nonce,
       'X-Zc-User-Id': this.user.userId,
       'X-Zc-User-Signature': shaSignature,
-      'X-Zc-Content-Length': bodyLen
+      'X-Zc-Content-Length': `${bodyLen}`,
     };
 
     await this.validateAccessTokens();
@@ -129,26 +135,49 @@ class Mill {
   }
 
   // returns a list of homes
-  async listHomes() {
-    return this.request('selectHomeList');
+  async listHomes(): Promise<IHomeList> {
+    return await this.request('selectHomeList') as IHomeList;
   }
 
   // returns a list of rooms in a house
-  async listRooms(homeId) {
-    return this.request('selectRoombyHome', { homeId, timeZoneNum: this.timeZoneNum });
+  async listRooms(homeId: string): Promise<IRoomList> {
+    return await this.request('selectRoombyHome', { homeId, timeZoneNum: this.timeZoneNum }) as IRoomList;
   }
 
   // returns a list of devices in a room
-  async listDevices(roomId) {
-    const room = await this.request('selectDevicebyRoom', { roomId, timeZoneNum: this.timeZoneNum });
-    if (!Room.validateRoom(room)) {
+  async listDevices(roomId: string) {
+    const room: { timeIdentification: number, roomInfo: IRoomInfoDto } = await this.request('selectDevicebyRoom2020', { roomId, timeZoneNum: this.timeZoneNum });
+    
+    console.log(room.roomInfo);
+
+    if (!Room.validateRoom(room.roomInfo)) {
       throw new Error(`Invalid respons from Mill API: ${JSON.stringify(room)}`);
     }
 
-    return new Room(room);
+    const devices: { device: IDeviceInfo, details: IDeviceDetailInfo }[] = [];
+
+    for(const dev of (room.roomInfo.deviceList || room.roomInfo.deviceInfo || [])) {
+      const details = await this.getDevice(dev.deviceId);
+
+      //console.log(details);
+
+      devices.push({device: dev, details: details});
+    }
+
+    return new Room(room.roomInfo, devices);
   }
 
-  async changeRoomTemperature(roomId, tempSettings) {
+  async getDevice(deviceId: number) {
+    
+    const device: IDeviceDetailInfo = await this.request('selectDevice2020', { deviceId, timeZoneNum: this.timeZoneNum });
+    
+    console.log(device);
+
+
+    return device;    
+  }
+
+  async changeRoomTemperature(roomId: string, tempSettings: ITempSettings) {
     const body = {
       roomId,
       comfortTemp: tempSettings.comfortTemp,
@@ -158,7 +187,7 @@ class Mill {
     return this.request('changeRoomModeTempInfoAway', body);
   }
 
-  async changeRoomMode(roomId, mode) {
+  async changeRoomMode(roomId: string, mode: number) {
     const body = {
       mode,
       roomId,

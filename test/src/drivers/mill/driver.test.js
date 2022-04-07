@@ -11,10 +11,10 @@ const Homey = require('homey');
 
 Homey.__ = (key, opts) => key;
 
-const Mill = require('../../../../lib/mill');
-const MillApp = require('../../../../app');
+const { Mill } = require('../../../../lib/mill');
+const MillApp = require('../../../../app.ts');
 // const Room = require('../../../../lib/models');
-const MillDriver = require('../../../../drivers/mill/driver');
+const MillDriver = require('../../../../drivers/mill/driver.ts');
 
 chai.use(chaiAsPromised);
 

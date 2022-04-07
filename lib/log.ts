@@ -1,8 +1,15 @@
-const Sentry = require('@sentry/node');
-const crypto = require('crypto');
+import { Homey } from "homey/lib/Device";
 
-class Log {
-  constructor(homey) {
+import * as Sentry from '@sentry/node';
+import crypto from 'crypto';
+
+export class Log {
+  capturedMessages: string[];
+  homey: Homey;
+  sentryEnabled: boolean = false;
+  capturedExceptions: any;
+
+  constructor(homey: Homey) {
     this.capturedExceptions = {};
     this.capturedMessages = [];
 
@@ -20,25 +27,28 @@ class Log {
     }
   }
 
-  static log(...args) {
+  static log(...args: (string | Error)[]) {
     console.log(Log.logTime(), '[homey-log]', ...args);
   }
 
-  init(dsn, opts = {}) {
+  init(dsn: string, opts: Sentry.NodeOptions = {}) {
     // if (process.env.DEBUG === '1' && this.homey.env.HOMEY_LOG_FORCE !== '1') {
     //   return Log.log('App is running in debug mode, disabling Sentry logging');
     // }
+
+    opts = opts || {};
+    opts.dsn = dsn;
 
     if (this.homey) {
       opts.release = `com.mill@${this.homey.manifest.version}`;
     }
 
-    Sentry.init(dsn, opts);
+    Sentry.init(opts);
 
     this.sentryEnabled = true;
 
     if (this.homey) {
-      Sentry.configureScope((scope) => {
+      Sentry.configureScope((scope: { setTag: (arg0: string, arg1: string) => void; }) => {
         scope.setTag('appId', this.homey.manifest.id);
         scope.setTag('appVersion', this.homey.manifest.version);
         scope.setTag('homeyVersion', this.homey.version);
@@ -52,7 +62,7 @@ class Log {
     return this;
   }
 
-  captureMessage(message) {
+  captureMessage(message: string) {
     Log.log('captureMessage:', message);
 
     if (this.capturedMessages.indexOf(message) > -1) {
@@ -72,7 +82,7 @@ class Log {
     return null;
   }
 
-  captureException(err) {
+  captureException(err: any) {
     Log.log('captureException:', err);
 
     const errHash = Log.hash(err.message);
@@ -98,7 +108,7 @@ class Log {
   }
 
   static logTime() {
-    const padZero = num => (num < 10 ? `0${num}` : num)
+    const padZero = (num: number) => (num < 10 ? `0${num}` : num)
 
     const date = new Date();
     const mm = padZero(date.getMonth() + 1);
@@ -110,9 +120,9 @@ class Log {
     return `${date.getFullYear()}-${mm}-${dd} ${hh}:${min}:${sec}`;
   }
 
-  static hash(str) {
+  static hash(str: crypto.BinaryLike) {
     return crypto.createHash('sha1').update(str).digest('base64');
   }
 }
 
-module.exports = Log;
+

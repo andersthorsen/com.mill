@@ -13,7 +13,7 @@ describe('com.mill app', () => {
 
   before(() => {
     chai.use(chaiAsPromised);
-    const App = proxyquire('../../app', {
+    const App = proxyquire('../../app.ts', {
       homey,
       './lib/mill': mill,
       './lib/util': { debug: () => {} }

@@ -4,7 +4,7 @@ const chai = require('chai');
 const { expect } = require('chai');
 const chaiAsPromised = require('chai-as-promised');
 const Mill = require('../../../lib/mill');
-const Room = require('../../../lib/models');
+const { Room } = require('../../../lib/models');
 
 chai.use(chaiAsPromised);
 

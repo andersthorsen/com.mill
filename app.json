@@ -1,8 +1,8 @@
 {
   "id": "com.mill",
-  "version": "1.0.8",
-  "compatibility": ">=1.5.0",
-  "sdk": 2,
+  "version": "1.0.9",
+  "compatibility": ">=5.0.0",
+  "sdk": 3,
   "name": {
     "en": "Mill WiFi"
   },
@@ -45,6 +45,20 @@
   "images": {
     "large": "/assets/images/large.png",
     "small": "/assets/images/small.png"
+  },
+  "api": {
+    "authenticate": {
+      "method": "POST",
+      "path": "/authenticate"
+    },
+    "clearSettings": {
+      "method": "POST",
+      "path": "/clearSettings"
+    },
+    "clearLog": {
+      "method": "POST",
+      "path": "/clearLog"
+    }
   },
   "capabilities": {
     "mill_onoff": {

@@ -25,5 +25,8 @@
   },
   "1.0.8": {
     "en": "Fixed problems with setting temperature"
+  },
+  "1.0.9": {
+    "en": "Added support for energy usage from cloud"
   }
 }

@@ -1,5 +1,5 @@
 const { expect } = require('chai');
-const Room = require('../../../lib/models');
+const { Room } = require('../../../lib/models');
 
 describe('room', () => {
   const roomJSON = {

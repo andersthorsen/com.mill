@@ -159,7 +159,7 @@
       });
 
       _$('#save-bt').onClick(function (e) {
-        Homey.set('interval', _$('#interval').get('value') || 300, function (err) {
+        Homey.set('interval', _$('#interval').get('value') || 60, function (err) {
           if (err) return Homey.alert(err);
         });
 
